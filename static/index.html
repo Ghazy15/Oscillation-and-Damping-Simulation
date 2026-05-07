@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Oscillation Simulation</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <button onclick="togglePanel('sim-panel', this)" class="nav-btn active">Simulation</button>
+        <button onclick="togglePanel('graph-panel', this)" class="nav-btn">Graph & Presets</button>
+        <button onclick="togglePanel('theory-panel', this)" class="nav-btn">Theory</button>
+    </nav>
+
+    <div class="workspace">
+        
+        <div id="sim-panel" class="island active" style="display: flex;">
+            <h2>Live Simulation</h2>
+            <div class="true-equation">
+                <div class="term tooltip" data-tip="m = Mass (kg)"><input type="number" id="m" value="1.0" step="0.1"></div>
+                <div class="fraction"><span>d²x</span><div class="bar"></div><span>dt²</span></div><span class="operator">+</span>
+                <div class="term tooltip" data-tip="c = Damping Coefficient"><input type="number" id="c" value="0.5" step="0.1"></div>
+                <div class="fraction"><span>dx</span><div class="bar"></div><span>dt</span></div><span class="operator">+</span>
+                <div class="term tooltip" data-tip="k = Spring Constant"><input type="number" id="k" value="10.0" step="1"></div>
+                <span class="operator">x = 0</span>
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 10px;">
+                <label>Initial Position (x₀): <input type="number" id="x0" value="5.0" step="0.5" style="width: 60px;"></label>
+            </div>
+
+            <div class="sim-layout">
+                <div class="canvas-wrapper">
+                    <div class="sim-controls">
+                        <button id="btn-play">Pause</button>
+                        <button id="btn-restart">Restart</button>
+                        <select id="speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1.0x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2.0x</option>
+                        </select>
+                        <label><input type="checkbox" id="chk-eq" checked> Equilibrium</label>
+                        <label><input type="checkbox" id="chk-nl"> Natural Length</label>
+                    </div>
+                    <div id="canvas-container"></div>
+                </div>
+                <div id="live-plot" style="width: 350px; height: 350px;"></div>
+            </div>
+        </div>
+
+        <div id="graph-panel" class="island">
+            <h2>Damping Analysis</h2>
+            <div class="mode-toggles" style="text-align: center; margin-bottom: 10px;">
+                <label><input type="radio" name="gmode" value="same" checked onchange="changeGraphMode()"> Same Graph</label>
+                <label><input type="radio" name="gmode" value="different" onchange="changeGraphMode()"> Different Graphs</label>
+            </div>
+            <div class="preset-buttons">
+                <button id="btn-none" onclick="togglePreset('none', 'Tanpa Redaman')">Tanpa Redaman</button>
+                <button id="btn-under" onclick="togglePreset('under', 'Underdamped')">Underdamped</button>
+                <button id="btn-crit" onclick="togglePreset('crit', 'Critically Damped')">Critically Damped</button>
+                <button id="btn-over" onclick="togglePreset('over', 'Overdamped')">Overdamped</button>
+                <button onclick="showAllPresets()" style="background:#3498db; color:white;">Show All</button>
+                <button onclick="clearPresets()" style="background:#e74c3c; color:white;">Clear</button>
+            </div>
+            <div id="preset-plot-container" class="plot-grid"></div>
+        </div>
+
+        <div id="theory-panel" class="island">
+            <h2>Dasar Teori</h2>
+            <p>Hukum Newton II untuk sistem massa-pegas dengan redaman menghasilkan persamaan diferensial orde dua:</p>
+            <div>
+                $$m\frac{d^2x}{dt^2} + c\frac{dx}{dt} + kx = 0$$
+            </div>
+            <ul style="line-height: 1.6;">
+                <li><b>Tanpa Redaman (c = 0):</b> Sistem berosilasi terus-menerus.</li>
+                <li><b>Underdamped ($c < 2\sqrt{mk}$):</b> Osilasi dengan amplitudo yang meluruh.</li>
+                <li><b>Critically Damped ($c = 2\sqrt{mk}$):</b> Sistem kembali ke titik setimbang secepat mungkin.</li>
+                <li><b>Overdamped ($c > 2\sqrt{mk}$):</b> Sistem kembali ke titik setimbang dengan lambat.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
