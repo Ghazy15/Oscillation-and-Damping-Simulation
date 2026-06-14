@@ -2,88 +2,302 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced Oscillation Simulation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oscillation Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <!--
+      IMPORTANT: MathJax v3 by default only treats \( ... \) as inline math,
+      NOT single $ ... $. Every Smart Solver step uses $...$, so without this
+      config block they were rendered as raw literal text (the "broken text"
+      issue) instead of typeset formulas. This must be defined BEFORE the
+      MathJax script tag loads.
+    -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath:  [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
-    <nav class="navbar">
-        <button onclick="togglePanel('sim-panel', this)" class="nav-btn active">Simulation</button>
-        <button onclick="togglePanel('graph-panel', this)" class="nav-btn">Graph & Presets</button>
-        <button onclick="togglePanel('theory-panel', this)" class="nav-btn">Theory</button>
-    </nav>
 
-    <div class="workspace">
-        
-        <div id="sim-panel" class="island active" style="display: flex;">
-            <h2>Live Simulation</h2>
-            <div class="true-equation">
-                <div class="term tooltip" data-tip="m = Mass (kg)"><input type="number" id="m" value="1.0" step="0.1"></div>
-                <div class="fraction"><span>d²x</span><div class="bar"></div><span>dt²</span></div><span class="operator">+</span>
-                <div class="term tooltip" data-tip="c = Damping Coefficient"><input type="number" id="c" value="0.5" step="0.1"></div>
-                <div class="fraction"><span>dx</span><div class="bar"></div><span>dt</span></div><span class="operator">+</span>
-                <div class="term tooltip" data-tip="k = Spring Constant"><input type="number" id="k" value="10.0" step="1"></div>
-                <span class="operator">x = 0</span>
-            </div>
-            
-            <div style="text-align: center; margin-bottom: 10px;">
-                <label>Initial Position (x₀): <input type="number" id="x0" value="5.0" step="0.5" style="width: 60px;"></label>
-            </div>
-
-            <div class="sim-layout">
-                <div class="canvas-wrapper">
-                    <div class="sim-controls">
-                        <button id="btn-play">Pause</button>
-                        <button id="btn-restart">Restart</button>
-                        <select id="speed-select">
-                            <option value="0.5">0.5x</option>
-                            <option value="1" selected>1.0x</option>
-                            <option value="1.5">1.5x</option>
-                            <option value="2">2.0x</option>
-                        </select>
-                        <label><input type="checkbox" id="chk-eq" checked> Equilibrium</label>
-                        <label><input type="checkbox" id="chk-nl"> Natural Length</label>
-                    </div>
-                    <div id="canvas-container"></div>
-                </div>
-                <div id="live-plot" style="width: 350px; height: 350px;"></div>
-            </div>
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="header">
+    <div class="header-left">
+        <div class="logo-mark">OSC</div>
+        <div class="header-title">
+            <span class="title-main">Oscillation Lab</span>
+            <span class="title-sub">Spring-Mass Damping Simulator</span>
         </div>
-
-        <div id="graph-panel" class="island">
-            <h2>Damping Analysis</h2>
-            <div class="mode-toggles" style="text-align: center; margin-bottom: 10px;">
-                <label><input type="radio" name="gmode" value="same" checked onchange="changeGraphMode()"> Same Graph</label>
-                <label><input type="radio" name="gmode" value="different" onchange="changeGraphMode()"> Different Graphs</label>
-            </div>
-            <div class="preset-buttons">
-                <button id="btn-none" onclick="togglePreset('none', 'Tanpa Redaman')">Tanpa Redaman</button>
-                <button id="btn-under" onclick="togglePreset('under', 'Underdamped')">Underdamped</button>
-                <button id="btn-crit" onclick="togglePreset('crit', 'Critically Damped')">Critically Damped</button>
-                <button id="btn-over" onclick="togglePreset('over', 'Overdamped')">Overdamped</button>
-                <button onclick="showAllPresets()" style="background:#3498db; color:white;">Show All</button>
-                <button onclick="clearPresets()" style="background:#e74c3c; color:white;">Clear</button>
-            </div>
-            <div id="preset-plot-container" class="plot-grid"></div>
-        </div>
-
-        <div id="theory-panel" class="island">
-            <h2>Dasar Teori</h2>
-            <p>Hukum Newton II untuk sistem massa-pegas dengan redaman menghasilkan persamaan diferensial orde dua:</p>
-            <div>
-                $$m\frac{d^2x}{dt^2} + c\frac{dx}{dt} + kx = 0$$
-            </div>
-            <ul style="line-height: 1.6;">
-                <li><b>Tanpa Redaman (c = 0):</b> Sistem berosilasi terus-menerus.</li>
-                <li><b>Underdamped ($c < 2\sqrt{mk}$):</b> Osilasi dengan amplitudo yang meluruh.</li>
-                <li><b>Critically Damped ($c = 2\sqrt{mk}$):</b> Sistem kembali ke titik setimbang secepat mungkin.</li>
-                <li><b>Overdamped ($c > 2\sqrt{mk}$):</b> Sistem kembali ke titik setimbang dengan lambat.</li>
-            </ul>
-        </div>
-
     </div>
-    <script src="/static/app.js"></script>
+    <nav class="nav-pills">
+        <button class="pill active" data-panel="sim-panel"    onclick="togglePanel('sim-panel', this)">Simulation</button>
+        <button class="pill"        data-panel="graph-panel"  onclick="togglePanel('graph-panel', this)">Analysis</button>
+        <button class="pill"        data-panel="solver-panel" onclick="togglePanel('solver-panel', this)">Smart Solver</button>
+        <button class="pill"        data-panel="theory-panel" onclick="togglePanel('theory-panel', this)">Theory</button>
+    </nav>
+    <!-- Live damping badge -->
+    <div class="damping-badge" id="damping-badge">
+        <span class="badge-zeta">ζ = —</span>
+        <span class="badge-cat" id="badge-cat">—</span>
+    </div>
+</header>
+
+<!-- ═══════════════ WORKSPACE ═══════════════ -->
+<main class="workspace">
+
+    <!-- ── SIM PANEL ── -->
+    <section id="sim-panel" class="panel active">
+
+        <!-- Equation bar -->
+        <div class="eq-bar">
+            <div class="eq-term tooltip" data-tip="m — Mass (kg)">
+                <input type="number" id="m" value="1.0" step="0.1" min="0.01">
+                <label>m</label>
+            </div>
+            <span class="eq-ddt">ẍ</span>
+            <span class="eq-op">+</span>
+            <div class="eq-term tooltip" data-tip="c — Damping coefficient (N·s/m)">
+                <input type="number" id="c" value="0.5" step="0.1" min="0">
+                <label>c</label>
+            </div>
+            <span class="eq-ddt">ẋ</span>
+            <span class="eq-op">+</span>
+            <div class="eq-term tooltip" data-tip="k — Spring constant (N/m)">
+                <input type="number" id="k" value="10.0" step="0.5" min="0.01">
+                <label>k</label>
+            </div>
+            <span class="eq-x">x</span>
+            <span class="eq-op">=</span>
+            <span class="eq-zero">0</span>
+
+            <!-- x₀ inline -->
+            <div class="eq-divider"></div>
+            <div class="eq-term tooltip" data-tip="x₀ — Initial position (m)">
+                <input type="number" id="x0" value="5.0" step="0.5">
+                <label>x₀</label>
+            </div>
+        </div>
+
+        <!-- Advanced params toggle -->
+        <details class="adv-params" id="adv-details">
+            <summary class="adv-summary">Advanced Parameters</summary>
+            <div class="adv-grid">
+                <div class="param-row">
+                    <label for="v0">V₀ (m/s)</label>
+                    <input type="number" id="v0" value="0.0" step="0.1">
+                </div>
+                <div class="param-row">
+                    <label for="t_max">T<sub>max</sub> (s)</label>
+                    <input type="range" id="t_max" value="20" min="5" max="60" step="1">
+                    <span id="t_max_val" class="slider-val">20s</span>
+                </div>
+                <div class="param-row">
+                    <label>Orientation</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-orientation">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label">Horizontal</span>
+                    </label>
+                </div>
+                <div class="param-row">
+                    <label>Loop simulation</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-loop" checked>
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span class="toggle-label" id="loop-label">Loop</span>
+                    </label>
+                </div>
+                <div class="param-row">
+                    <label>Show Eq. line</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-eq" checked>
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+                <div class="param-row">
+                    <label>Show Nat. Length</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chk-nl">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <!-- Main sim layout -->
+        <div class="sim-layout">
+            <!-- Canvas -->
+            <div class="canvas-card">
+                <div class="canvas-toolbar">
+                    <button class="tb-btn" id="btn-play">⏸ Pause</button>
+                    <button class="tb-btn" id="btn-restart">↺ Restart</button>
+                    <select id="speed-select" class="tb-select">
+                        <option value="0.25">0.25×</option>
+                        <option value="0.5">0.5×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="2">2×</option>
+                        <option value="4">4×</option>
+                    </select>
+                </div>
+                <div id="canvas-container"></div>
+            </div>
+
+            <!-- Live plot -->
+            <div class="plot-card">
+                <div class="plot-header">
+                    <span class="plot-title">Position  x(t)</span>
+                </div>
+                <div id="live-plot" class="plotly-box"></div>
+                <div class="live-readout">
+                    <div class="readout-item">
+                        <span class="readout-label">x</span>
+                        <span class="readout-value" id="readout-x">0.000</span>
+                        <span class="readout-unit">m</span>
+                    </div>
+                    <div class="readout-item">
+                        <span class="readout-label">T</span>
+                        <span class="readout-value" id="readout-t">0.000</span>
+                        <span class="readout-unit">s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── GRAPH / ANALYSIS PANEL ── -->
+    <section id="graph-panel" class="panel">
+        <h2 class="panel-title">Damping Analysis</h2>
+
+        <div class="graph-controls">
+            <div class="mode-group">
+                <label class="radio-pill">
+                    <input type="radio" name="gmode" value="same" checked onchange="changeGraphMode()"> Combined
+                </label>
+                <label class="radio-pill">
+                    <input type="radio" name="gmode" value="different" onchange="changeGraphMode()"> Separate
+                </label>
+            </div>
+            <div class="preset-group">
+                <button id="btn-none"  class="preset-btn" onclick="togglePreset('none','Tanpa Redaman')">Undamped</button>
+                <button id="btn-under" class="preset-btn" onclick="togglePreset('under','Underdamped')">Under</button>
+                <button id="btn-crit"  class="preset-btn" onclick="togglePreset('crit','Critically Damped')">Critical</button>
+                <button id="btn-over"  class="preset-btn" onclick="togglePreset('over','Overdamped')">Over</button>
+                <button class="preset-btn all-btn" onclick="showAllPresets()">All</button>
+                <button class="preset-btn clr-btn" onclick="clearPresets()">Clear</button>
+            </div>
+        </div>
+
+        <div id="preset-plot-container" class="plot-grid"></div>
+    </section>
+
+    <!-- ── SMART SOLVER PANEL ── -->
+    <section id="solver-panel" class="panel">
+        <h2 class="panel-title">Smart Solver</h2>
+        <p class="panel-desc">Step-by-step physics calculations with full derivation.</p>
+
+        <div class="solver-layout">
+            <div class="solver-form">
+                <div class="solver-type-group">
+                    <label class="solver-radio">
+                        <input type="radio" name="stype" value="position" checked onchange="onSolverTypeChange()">
+                        <span>① Find x(t)</span>
+                    </label>
+                    <label class="solver-radio">
+                        <input type="radio" name="stype" value="critical_c" onchange="onSolverTypeChange()">
+                        <span>② Critical c_c</span>
+                    </label>
+                    <label class="solver-radio">
+                        <input type="radio" name="stype" value="spring_constant" onchange="onSolverTypeChange()">
+                        <span>③ Find k or m</span>
+                    </label>
+                </div>
+
+                <!-- Position form -->
+                <div id="solver-form-position" class="solver-inputs">
+                    <div class="si-row"><label>m (kg)</label><input type="number" id="sl-m" value="1" step="0.1"></div>
+                    <div class="si-row"><label>c (N·s/m)</label><input type="number" id="sl-c" value="0.5" step="0.1"></div>
+                    <div class="si-row"><label>k (N/m)</label><input type="number" id="sl-k" value="10" step="0.5"></div>
+                    <div class="si-row"><label>x₀ (m)</label><input type="number" id="sl-x0" value="5" step="0.5"></div>
+                    <div class="si-row"><label>v₀ (m/s)</label><input type="number" id="sl-v0" value="0" step="0.1"></div>
+                    <div class="si-row"><label>t (s)</label><input type="number" id="sl-t" value="1" step="0.5" min="0"></div>
+                </div>
+
+                <!-- Critical c form -->
+                <div id="solver-form-critical_c" class="solver-inputs hidden">
+                    <div class="si-row"><label>m (kg)</label><input type="number" id="slc-m" value="1" step="0.1"></div>
+                    <div class="si-row"><label>k (N/m)</label><input type="number" id="slc-k" value="10" step="0.5"></div>
+                </div>
+
+                <!-- Spring/mass form -->
+                <div id="solver-form-spring_constant" class="solver-inputs hidden">
+                    <div class="si-row">
+                        <label>Solve for</label>
+                        <select id="sk-for">
+                            <option value="k">k (given m)</option>
+                            <option value="m">m (given k)</option>
+                        </select>
+                    </div>
+                    <div class="si-row"><label>ωₙ (rad/s)</label><input type="number" id="sk-omega" value="3.16" step="0.1"></div>
+                    <div class="si-row" id="sk-row-m"><label>m (kg)</label><input type="number" id="sk-m" value="1" step="0.1"></div>
+                    <div class="si-row hidden" id="sk-row-k"><label>k (N/m)</label><input type="number" id="sk-k" value="10" step="0.5"></div>
+                </div>
+
+                <button class="solve-btn" onclick="runSolver()">Calculate →</button>
+            </div>
+
+            <div class="solver-output" id="solver-output">
+                <div class="solver-placeholder">
+                    <span>Select a solver type and press Calculate</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── THEORY PANEL ── -->
+    <section id="theory-panel" class="panel">
+        <h2 class="panel-title">Dasar Teori</h2>
+        <div class="theory-content">
+            <p>Hukum Newton II untuk sistem massa-pegas dengan redaman menghasilkan persamaan diferensial orde dua:</p>
+            <div class="math-block">$$m\ddot{x} + c\dot{x} + kx = 0$$</div>
+
+            <p>Solusi umum bergantung pada nilai <strong>rasio redaman</strong>:</p>
+            <div class="math-block">$$\zeta = \frac{c}{c_c} = \frac{c}{2\sqrt{mk}}$$</div>
+
+            <div class="theory-cards">
+                <div class="theory-card undamped">
+                    <h3>Tanpa Redaman <code>ζ = 0</code></h3>
+                    <div class="math-block small">$$x(t) = x_0\cos(\omega_n t) + \frac{v_0}{\omega_n}\sin(\omega_n t)$$</div>
+                    <p>Sistem berosilasi terus-menerus tanpa kehilangan energi.</p>
+                </div>
+                <div class="theory-card under">
+                    <h3>Underdamped <code>ζ &lt; 1</code></h3>
+                    <div class="math-block small">$$x(t) = e^{-\zeta\omega_n t}\left[A\cos(\omega_d t) + B\sin(\omega_d t)\right]$$</div>
+                    <p>Osilasi dengan amplitudo yang meluruh secara eksponensial.</p>
+                </div>
+                <div class="theory-card critical">
+                    <h3>Critically Damped <code>ζ = 1</code></h3>
+                    <div class="math-block small">$$x(t) = (A + Bt)e^{-\omega_n t}$$</div>
+                    <p>Kembali ke setimbang paling cepat tanpa berosilasi.</p>
+                </div>
+                <div class="theory-card over">
+                    <h3>Overdamped <code>ζ &gt; 1</code></h3>
+                    <div class="math-block small">$$x(t) = Ae^{s_1 t} + Be^{s_2 t}$$</div>
+                    <p>Kembali ke setimbang secara lambat tanpa osilasi.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script src="/static/app.js"></script>
 </body>
 </html>

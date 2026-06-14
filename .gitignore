@@ -1,1 +1,5 @@
 .aider*
+
+# For Windows users
+# To activate the virtual environment, run these commands from the terminal:
+# > .venv\Scripts\activate
